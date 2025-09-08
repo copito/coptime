@@ -146,6 +146,6 @@ This will run:
 
 ## License
 
-MIT
+MIT [License](./LICENSE.md)
 
 ---
