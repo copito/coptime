@@ -161,7 +161,111 @@ func exampleWindowIterator() {
 
 	i := 1
 	for value := range iterator {
-		if i >= 10 {
+		if i >= 5_000 {
+			break
+		}
+
+		fmt.Printf("Values for: %s\n", value)
+		i++
+	}
+
+	fmt.Println("Done!")
+}
+
+func exampleWindowWithRuleIterator() {
+	startTime := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2025, 2, 2, 0, 0, 0, 0, time.UTC)
+
+	// ---------------------
+	// Iterator
+	// ---------------------
+	opts := window.WindowOption{
+		IntervalOption: interval.IntervalOption{
+			AnchorDate:    startTime,
+			StartDate:     &startTime,
+			EndDate:       &endTime,
+			FrequencyUnit: interval.FrequencyDay,
+			IntervalValue: 1,
+		},
+		Rules: []rules.Rule{
+			{
+				IntervalType: rules.RuleTypeInclusion,
+				MonthDays:    []uint32{1},
+			},
+		},
+	}
+	w := window.New(opts)
+
+	iterator, err := w.Iterate(interval.DirectionForward, nil)
+	if err != nil {
+		panic(fmt.Errorf("error: %v", err.Error()))
+	}
+
+	i := 1
+	for value := range iterator {
+		if i >= 5_000 {
+			break
+		}
+
+		fmt.Printf("Values for: %s\n", value)
+		i++
+	}
+
+	fmt.Println("Done!")
+}
+
+func exampleWindowWithRuleAdvancedIterator() {
+	startTime := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2025, 2, 2, 0, 0, 0, 0, time.UTC)
+
+	// ---------------------
+	// Iterator
+	// ---------------------
+	opts := window.WindowOption{
+		IntervalOption: interval.IntervalOption{
+			AnchorDate:    startTime,
+			StartDate:     &startTime,
+			EndDate:       &endTime,
+			FrequencyUnit: interval.FrequencyDay,
+			IntervalValue: 1,
+		},
+		Rules: []rules.Rule{
+			{
+				IntervalType: rules.RuleTypeInclusion,
+				MonthDays:    []uint32{1},
+			},
+			{
+				IntervalType: rules.RuleTypeInclusion,
+				DayOfWeeks:   []time.Weekday{time.Friday, time.Saturday, time.Sunday},
+				TimeRange: &rules.TimeRange{
+					StartTimeReference: rules.TimeReference{
+						Hour:        9,
+						Minute:      30,
+						Second:      0,
+						MilliSecond: 0,
+						NanoSecond:  0,
+					},
+					EndTimeReference: rules.TimeReference{
+						Hour:        17,
+						Minute:      30,
+						Second:      0,
+						MilliSecond: 0,
+						NanoSecond:  0,
+					},
+				},
+			},
+		},
+	}
+	w := window.New(opts)
+
+	iterator, err := w.Iterate(interval.DirectionForward, nil)
+	if err != nil {
+		panic(fmt.Errorf("error: %v", err.Error()))
+	}
+
+	i := 1
+	for value := range iterator {
+		if i >= 5_000 {
 			break
 		}
 
@@ -196,5 +300,15 @@ func main() {
 	// ---------------------
 	// Window - Iterator
 	// ---------------------
-	exampleWindowIterator()
+	// exampleWindowIterator()
+
+	// ---------------------
+	// Window - Iterator with Rule
+	// ---------------------
+	exampleWindowWithRuleIterator()
+
+	// ---------------------
+	// Window - Iterator with Rule (advanced)
+	// ---------------------
+	exampleWindowWithRuleAdvancedIterator()
 }
