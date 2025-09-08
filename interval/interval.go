@@ -31,6 +31,20 @@ func New(option IntervalOption) Intervaler {
 	}
 }
 
+func FromRRULE(rruleString string) (*Intervaler, error) {
+	option, err := convertRRULEtoIntervaler(rruleString)
+	if err != nil {
+		return nil, err
+	}
+
+	if option == nil {
+		return nil, errors.New("options for Intervaler are empty")
+	}
+
+	iv := New(*option)
+	return &iv, nil
+}
+
 // func (i *Intervaler) calculateNext(previousTime time.Time, direction Direction) time.Time {
 // 	var nextTime time.Time
 
