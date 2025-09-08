@@ -236,7 +236,7 @@ func (i *Intervaler) Between(direction Direction, startTime time.Time, endTime t
 	}
 
 	for value := range iterator {
-		if value.Before(endTime) && value.After(startTime) {
+		if (value.Before(endTime) && value.After(startTime)) || value.Equal(startTime) || value.Equal(endTime) {
 			list = append(list, value)
 		}
 	}
