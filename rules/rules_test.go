@@ -8,53 +8,53 @@ func TestFilterRules(t *testing.T) {
 	testTable := []struct {
 		name     string
 		rules    []Rule
-		ruleType IntervalRuleType
+		ruleType RuleType
 		expected int
 	}{
 		{
 			name:     "empty rules",
 			rules:    []Rule{},
-			ruleType: IntervalRuleTypeInclusion,
+			ruleType: RuleTypeInclusion,
 			expected: 0,
 		},
 		{
 			name: "only inclusion rules",
 			rules: []Rule{
-				{IntervalType: IntervalRuleTypeInclusion},
-				{IntervalType: IntervalRuleTypeInclusion},
+				{IntervalType: RuleTypeInclusion},
+				{IntervalType: RuleTypeInclusion},
 			},
-			ruleType: IntervalRuleTypeInclusion,
+			ruleType: RuleTypeInclusion,
 			expected: 2,
 		},
 		{
 			name: "only exclusion rules",
 			rules: []Rule{
-				{IntervalType: IntervalRuleTypeExclusion},
-				{IntervalType: IntervalRuleTypeExclusion},
+				{IntervalType: RuleTypeExclusion},
+				{IntervalType: RuleTypeExclusion},
 			},
-			ruleType: IntervalRuleTypeExclusion,
+			ruleType: RuleTypeExclusion,
 			expected: 2,
 		},
 		{
 			name: "mixed rules",
 			rules: []Rule{
-				{IntervalType: IntervalRuleTypeInclusion},
-				{IntervalType: IntervalRuleTypeExclusion},
-				{IntervalType: IntervalRuleTypeInclusion},
-				{IntervalType: IntervalRuleTypeExclusion},
+				{IntervalType: RuleTypeInclusion},
+				{IntervalType: RuleTypeExclusion},
+				{IntervalType: RuleTypeInclusion},
+				{IntervalType: RuleTypeExclusion},
 			},
-			ruleType: IntervalRuleTypeInclusion,
+			ruleType: RuleTypeInclusion,
 			expected: 2,
 		},
 		{
 			name: "mixed rules, exclusion",
 			rules: []Rule{
-				{IntervalType: IntervalRuleTypeInclusion},
-				{IntervalType: IntervalRuleTypeExclusion},
-				{IntervalType: IntervalRuleTypeInclusion},
-				{IntervalType: IntervalRuleTypeExclusion},
+				{IntervalType: RuleTypeInclusion},
+				{IntervalType: RuleTypeExclusion},
+				{IntervalType: RuleTypeInclusion},
+				{IntervalType: RuleTypeExclusion},
 			},
-			ruleType: IntervalRuleTypeExclusion,
+			ruleType: RuleTypeExclusion,
 			expected: 2,
 		},
 	}

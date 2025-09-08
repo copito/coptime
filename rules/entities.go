@@ -2,11 +2,11 @@ package rules
 
 import "time"
 
-type IntervalRuleType int32
+type RuleType int32
 
 const (
-	IntervalRuleTypeInclusion IntervalRuleType = iota
-	IntervalRuleTypeExclusion
+	RuleTypeInclusion RuleType = iota
+	RuleTypeExclusion
 )
 
 type TimeReference struct {
@@ -36,7 +36,7 @@ const (
 )
 
 type Rule struct {
-	IntervalType IntervalRuleType
+	IntervalType RuleType
 	TimeRange    *TimeRange
 	DayOfWeeks   []time.Weekday
 	MonthDays    []uint32
