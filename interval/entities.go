@@ -5,16 +5,16 @@ import "time"
 type Frequency int32
 
 const (
-	FrequencyNanoSecond  Frequency = iota
-	FrequencyMilliSecond Frequency = iota
-	FrequencySecond      Frequency = iota
-	FrequencyMinute      Frequency = iota
-	FrequencyHour        Frequency = iota
-	FrequencyDay         Frequency = iota
-	FrequencyWeek        Frequency = iota
-	FrequencyMonth       Frequency = iota
-	FrequencyQuarter     Frequency = iota // suggar syntax (3 months)
-	FrequencyYear        Frequency = iota
+	FrequencyNanoSecond Frequency = iota
+	FrequencyMilliSecond
+	FrequencySecond
+	FrequencyMinute
+	FrequencyHour
+	FrequencyDay
+	FrequencyWeek
+	FrequencyMonth
+	FrequencyQuarter // suggar syntax (3 months)
+	FrequencyYear
 )
 
 var possibleFrequencies = []Frequency{
@@ -41,8 +41,8 @@ type IntervalOption struct {
 type Direction int32
 
 const (
-	DirectionForward  Direction = iota
-	DirectionBackward Direction = iota
+	DirectionForward Direction = iota
+	DirectionBackward
 )
 
 const (
