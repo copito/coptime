@@ -1,10 +1,12 @@
 package rules
 
+import "time"
+
 type IntervalRuleType int32
 
 const (
 	IntervalRuleTypeInclusion IntervalRuleType = iota
-	IntervalRuleTypeExclusion IntervalRuleType = iota
+	IntervalRuleTypeExclusion
 )
 
 type TimeReference struct {
@@ -33,29 +35,11 @@ const (
 	DayOfWeekSunday    DayOfWeek = iota
 )
 
-type Month int32
-
-const (
-	_                    = iota // 0 th term so the other months align
-	MonthJanuary   Month = iota
-	MonthFebruary  Month = iota
-	MonthMarch     Month = iota
-	MonthApril     Month = iota
-	MonthMay       Month = iota
-	MonthJune      Month = iota
-	MonthJuly      Month = iota
-	MonthAugust    Month = iota
-	MonthSeptember Month = iota
-	MonthOctober   Month = iota
-	MonthNovember  Month = iota
-	MonthDecember  Month = iota
-)
-
-type Rules struct {
+type Rule struct {
 	IntervalType IntervalRuleType
-	TimeRange    TimeRange
-	DayOfWeeks   []DayOfWeek
-	Months       []Month
+	TimeRange    *TimeRange
+	DayOfWeeks   []time.Weekday
 	MonthDays    []uint32
+	Months       []time.Month
 	Years        []uint32
 }
