@@ -136,7 +136,7 @@ func adjustFrequencyUnitForRuleEvaluation(unit interval.Frequency) interval.Freq
 	return interval.FrequencyDay
 }
 
-func GenerateSubWindowsForInclusion(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rules []Rule, loc *time.Location) []common.SubWindowResult {
+func GenerateSubWindowsForRuleType(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rules []Rule, loc *time.Location) []common.SubWindowResult {
 	evaluatedFrequencyUnit := adjustFrequencyUnitForRuleEvaluation(unit)
 
 	// Generate a day window for each subwindow
@@ -207,13 +207,6 @@ func mergeSubWindows(subWindows []common.SubWindowResult) []common.SubWindowResu
 	}
 
 	return merged
-}
-
-func GenerateSubWindowsForExclusion(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rules []Rule, loc *time.Location) []common.SubWindowResult {
-	// TODO: implement exclusion logic
-	subWindows := []common.SubWindowResult{}
-	subWindows = mergeSubWindows(subWindows)
-	return subWindows
 }
 
 func SubtractSubwindowsFromAdditives(adds []common.SubWindowResult, subs []common.SubWindowResult) []common.SubWindowResult {

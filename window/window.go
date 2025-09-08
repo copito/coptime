@@ -85,10 +85,10 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 			var subWindows []common.SubWindowResult
 
 			// 1. Apply inclusion rules
-			additiveSubWindows := rules.GenerateSubWindowsForInclusion(direction, w.opt.FrequencyUnit, previousTime, nextTime, includes, tz)
+			additiveSubWindows := rules.GenerateSubWindowsForRuleType(direction, w.opt.FrequencyUnit, previousTime, nextTime, includes, tz)
 
 			// 2. Apply exclusion rules
-			subtractiveSubWindows := rules.GenerateSubWindowsForExclusion(direction, w.opt.FrequencyUnit, previousTime, nextTime, excludes, tz)
+			subtractiveSubWindows := rules.GenerateSubWindowsForRuleType(direction, w.opt.FrequencyUnit, previousTime, nextTime, excludes, tz)
 
 			// 3. Combine additive and subtractive sub-windows
 			subWindows = rules.SubtractSubwindowsFromAdditives(additiveSubWindows, subtractiveSubWindows)
