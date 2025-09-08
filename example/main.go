@@ -150,7 +150,7 @@ func exampleWindowIterator() {
 			FrequencyUnit: interval.FrequencyDay,
 			IntervalValue: 1,
 		},
-		Rules: []rules.Rules{},
+		Rules: []rules.Rule{},
 	}
 	w := window.New(opts)
 
