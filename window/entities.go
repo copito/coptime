@@ -7,20 +7,24 @@ import (
 	rules "github.com/copito/coptime/rules"
 )
 
+const (
+	DEFAULT_MAX_ATTEMPTS int32 = 10_000
+)
+
 type SubWindowResult struct {
-	StartTime time.Time
-	EndTime   time.Time
+	Start time.Time
+	End   time.Time
 }
 
 type WindowResult struct {
-	StartWindow time.Time
-	EndWindow   time.Time
-	SubWindow   []SubWindowResult
+	Start     time.Time
+	End       time.Time
+	SubWindow []SubWindowResult
 }
 
 type WindowOption struct {
 	interval.IntervalOption
 
 	// All rules applied on top of the windows
-	Rules []rules.Rules
+	Rules []rules.Rule
 }
