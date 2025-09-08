@@ -31,43 +31,92 @@ func New(option IntervalOption) Intervaler {
 	}
 }
 
-func (i *Intervaler) calculateNext(previousTime time.Time, direction Direction) time.Time {
-	var nextTime time.Time
+// func (i *Intervaler) calculateNext(previousTime time.Time, direction Direction) time.Time {
+// 	var nextTime time.Time
 
+// 	step := 1
+// 	if direction == DirectionBackward {
+// 		step = -1
+// 	}
+
+// 	intervalValue := int64(i.opt.IntervalValue) * int64(step)
+// 	duration := time.Duration(intervalValue)
+
+// 	switch i.opt.FrequencyUnit {
+// 	case FrequencyNanoSecond:
+// 		nextTime = previousTime.Add(time.Nanosecond * duration)
+// 	case FrequencyMilliSecond:
+// 		nextTime = previousTime.Add(time.Millisecond * duration)
+// 	case FrequencySecond:
+// 		nextTime = previousTime.Add(time.Second * duration)
+// 	case FrequencyMinute:
+// 		nextTime = previousTime.Add(time.Minute * duration)
+// 	case FrequencyHour:
+// 		nextTime = previousTime.Add(time.Hour * duration)
+// 	case FrequencyDay:
+// 		nextTime = previousTime.AddDate(0, 0, int(intervalValue))
+// 	case FrequencyWeek:
+// 		nextTime = previousTime.AddDate(0, 0, int(intervalValue)*7)
+// 	case FrequencyMonth:
+// 		nextTime = previousTime.AddDate(0, int(intervalValue), 0)
+// 	case FrequencyQuarter:
+// 		nextTime = previousTime.AddDate(0, int(intervalValue)*3, 0)
+// 	case FrequencyYear:
+// 		nextTime = previousTime.AddDate(int(intervalValue), 0, 0)
+// 	default:
+// 		nextTime = time.Time{}
+// 	}
+
+// 	return nextTime
+// }
+
+func (i *Intervaler) calculateNext(previousTime time.Time, direction Direction) time.Time {
+	anchor := i.opt.AnchorDate
+	iv := int(i.opt.IntervalValue)
+	if iv <= 0 {
+		iv = 1
+	}
 	step := 1
 	if direction == DirectionBackward {
 		step = -1
 	}
 
-	intervalValue := int64(i.opt.IntervalValue) * int64(step)
-	duration := time.Duration(intervalValue)
-
 	switch i.opt.FrequencyUnit {
-	case FrequencyNanoSecond:
-		nextTime = previousTime.Add(time.Nanosecond * duration)
-	case FrequencyMilliSecond:
-		nextTime = previousTime.Add(time.Millisecond * duration)
-	case FrequencySecond:
-		nextTime = previousTime.Add(time.Second * duration)
-	case FrequencyMinute:
-		nextTime = previousTime.Add(time.Minute * duration)
-	case FrequencyHour:
-		nextTime = previousTime.Add(time.Hour * duration)
+	case FrequencyNanoSecond, FrequencyMilliSecond, FrequencySecond, FrequencyMinute, FrequencyHour:
+		// Sub-day units: stepping from previousTime is fine
+		intervalValue := time.Duration(int64(i.opt.IntervalValue) * int64(step))
+		switch i.opt.FrequencyUnit {
+		case FrequencyNanoSecond:
+			return previousTime.Add(time.Nanosecond * intervalValue)
+		case FrequencyMilliSecond:
+			return previousTime.Add(time.Millisecond * intervalValue)
+		case FrequencySecond:
+			return previousTime.Add(time.Second * intervalValue)
+		case FrequencyMinute:
+			return previousTime.Add(time.Minute * intervalValue)
+		case FrequencyHour:
+			return previousTime.Add(time.Hour * intervalValue)
+		}
+
 	case FrequencyDay:
-		nextTime = previousTime.AddDate(0, 0, int(intervalValue))
+		// Align to anchor day cadence
+		return nextFromAnchorDays(anchor, previousTime, iv, step)
+
 	case FrequencyWeek:
-		nextTime = previousTime.AddDate(0, 0, int(intervalValue)*7)
+		// Align to anchor weekday/time; weeks are multiples of 7 days from anchor
+		return nextFromAnchorWeeks(anchor, previousTime, iv, step)
+
 	case FrequencyMonth:
-		nextTime = previousTime.AddDate(0, int(intervalValue), 0)
+		return nextFromAnchorMonths(anchor, previousTime, iv, step)
+
 	case FrequencyQuarter:
-		nextTime = previousTime.AddDate(0, int(intervalValue)*3, 0)
+		return nextFromAnchorMonths(anchor, previousTime, 3*iv, step)
+
 	case FrequencyYear:
-		nextTime = previousTime.AddDate(int(intervalValue), 0, 0)
-	default:
-		nextTime = time.Time{}
+		return nextFromAnchorYears(anchor, previousTime, iv, step)
 	}
 
-	return nextTime
+	return time.Time{}
 }
 
 func (i *Intervaler) estimateIntervalSize(startTime time.Time, endTime time.Time, freq Frequency, interval int32) int32 {
