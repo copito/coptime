@@ -1,21 +1,21 @@
-package window
+package rules
 
 import (
 	"slices"
 	"sort"
 	"time"
 
+	"github.com/copito/coptime/common"
 	"github.com/copito/coptime/interval"
-	"github.com/copito/coptime/rules"
 )
 
-func timesToWindows(times []time.Time) []SubWindowResult {
+func timesToWindows(times []time.Time) []common.SubWindowResult {
 	if len(times) == 0 {
-		return []SubWindowResult{}
+		return []common.SubWindowResult{}
 	}
 
 	if len(times) == 1 {
-		return []SubWindowResult{
+		return []common.SubWindowResult{
 			{
 				Start: times[0],
 				End:   times[0],
@@ -23,9 +23,9 @@ func timesToWindows(times []time.Time) []SubWindowResult {
 		}
 	}
 
-	var windows []SubWindowResult
+	var windows []common.SubWindowResult
 	for i := 0; i < len(times)-1; i++ {
-		windows = append(windows, SubWindowResult{
+		windows = append(windows, common.SubWindowResult{
 			Start: times[i],
 			End:   times[i+1],
 		})
@@ -33,7 +33,7 @@ func timesToWindows(times []time.Time) []SubWindowResult {
 	return windows
 }
 
-func matchesRuleToWindow(r rules.Rule, start time.Time, end time.Time) *SubWindowResult {
+func matchesRuleToWindow(r Rule, start time.Time, end time.Time) *common.SubWindowResult {
 	// loc := getTimezone(r.Timezone)
 	// localTime := startTime.In(loc)
 
@@ -122,13 +122,21 @@ func matchesRuleToWindow(r rules.Rule, start time.Time, end time.Time) *SubWindo
 		timeRangeEnd = end
 	}
 
-	return &SubWindowResult{
+	return &common.SubWindowResult{
 		Start: timeRangeStart,
 		End:   timeRangeEnd,
 	}
 }
 
-func addInclusionRuleToSubWindow(unit interval.Frequency, start time.Time, end time.Time, rules []rules.Rule, loc *time.Location) []SubWindowResult {
+func adjustFrequencyUnitForRuleEvaluation(unit interval.Frequency) interval.Frequency {
+	// When the frequency is less than a day, we evaluate rules on a daily basis
+	if unit < interval.FrequencyDay {
+		return interval.FrequencyHour
+	}
+	return interval.FrequencyDay
+}
+
+func GenerateSubWindowsForInclusion(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rules []Rule, loc *time.Location) []common.SubWindowResult {
 	evaluatedFrequencyUnit := adjustFrequencyUnitForRuleEvaluation(unit)
 
 	// Generate a day window for each subwindow
@@ -140,14 +148,14 @@ func addInclusionRuleToSubWindow(unit interval.Frequency, start time.Time, end t
 		IntervalValue: 1,
 	})
 
-	times, err := iv.Between(interval.DirectionForward, start, end, nil)
+	times, err := iv.Between(direction, start, end, nil)
 	if err != nil {
-		return []SubWindowResult{}
+		return []common.SubWindowResult{}
 	}
 
 	evaluationWindow := timesToWindows(times)
 
-	subWindows := make([]SubWindowResult, 0, len(evaluationWindow)*len(rules))
+	subWindows := make([]common.SubWindowResult, 0, len(evaluationWindow)*len(rules))
 	for _, w := range evaluationWindow {
 		for _, r := range rules {
 			subWindowFilter := matchesRuleToWindow(r, w.Start, w.End)
@@ -167,10 +175,12 @@ func addInclusionRuleToSubWindow(unit interval.Frequency, start time.Time, end t
 			subWindows = append(subWindows, *subWindowFilter)
 		}
 	}
+
+	subWindows = mergeSubWindows(subWindows)
 	return subWindows
 }
 
-func mergeSubWindows(subWindows []SubWindowResult) []SubWindowResult {
+func mergeSubWindows(subWindows []common.SubWindowResult) []common.SubWindowResult {
 	if len(subWindows) == 0 {
 		return subWindows
 	}
@@ -180,7 +190,7 @@ func mergeSubWindows(subWindows []SubWindowResult) []SubWindowResult {
 		return subWindows[i].Start.Before(subWindows[j].Start)
 	})
 
-	merged := []SubWindowResult{subWindows[0]}
+	merged := []common.SubWindowResult{subWindows[0]}
 
 	for i := 1; i < len(subWindows); i++ {
 		last := &merged[len(merged)-1]
@@ -199,34 +209,36 @@ func mergeSubWindows(subWindows []SubWindowResult) []SubWindowResult {
 	return merged
 }
 
-func removeExclusonRuleFromSubWindow(unit interval.Frequency, start time.Time, end time.Time, rules []rules.Rule, loc *time.Location) []SubWindowResult {
+func GenerateSubWindowsForExclusion(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rules []Rule, loc *time.Location) []common.SubWindowResult {
 	// TODO: implement exclusion logic
-	return []SubWindowResult{}
+	subWindows := []common.SubWindowResult{}
+	subWindows = mergeSubWindows(subWindows)
+	return subWindows
 }
 
-func filterAdditiveSubwindows(adds []SubWindowResult, subs []SubWindowResult) []SubWindowResult {
+func SubtractSubwindowsFromAdditives(adds []common.SubWindowResult, subs []common.SubWindowResult) []common.SubWindowResult {
 	if len(adds) == 0 {
-		return []SubWindowResult{}
+		return []common.SubWindowResult{}
 	}
 
 	if len(subs) == 0 {
 		return adds
 	}
 
-	var result []SubWindowResult
+	var result []common.SubWindowResult
 	for _, add := range adds {
 		// Start with the current additivie window
-		remaining := []SubWindowResult{add}
+		remaining := []common.SubWindowResult{add}
 
 		// For each subtractive window, remove its overlap from all remaining windows
 		for _, sub := range subs {
-			var temp []SubWindowResult
+			var temp []common.SubWindowResult
 			for _, rem := range remaining {
 				// Check if the subtractive window overlaps with the remaining window
 				if rem.Start.Before(sub.End) && rem.End.After(sub.Start) {
 					// There is an overlap, split the remaining window if necessary
 					if rem.Start.Before(sub.Start) {
-						temp = append(temp, SubWindowResult{
+						temp = append(temp, common.SubWindowResult{
 							Start: rem.Start,
 							End:   sub.Start,
 						})
@@ -238,7 +250,7 @@ func filterAdditiveSubwindows(adds []SubWindowResult, subs []SubWindowResult) []
 					// 	})
 					// }
 					if rem.End.After(sub.End) {
-						temp = append(temp, SubWindowResult{
+						temp = append(temp, common.SubWindowResult{
 							Start: sub.End,
 							End:   rem.End,
 						})
@@ -256,4 +268,41 @@ func filterAdditiveSubwindows(adds []SubWindowResult, subs []SubWindowResult) []
 		result = append(result, remaining...)
 	}
 	return result
+}
+
+func CreateCompleteInclusionRule(start time.Time, end time.Time) Rule {
+	startYear := uint32(start.Year())
+	endYear := uint32(end.Year())
+
+	minYear := min(startYear, endYear)
+	maxYear := max(startYear, endYear)
+
+	years := []uint32{}
+	for y := minYear; y <= maxYear; y++ {
+		years = append(years, y)
+	}
+
+	return Rule{
+		IntervalType: RuleTypeInclusion,
+		TimeRange: &TimeRange{
+			StartTimeReference: TimeReference{
+				Hour:        0,
+				Minute:      0,
+				Second:      0,
+				MilliSecond: 0,
+				NanoSecond:  0,
+			},
+			EndTimeReference: TimeReference{
+				Hour:        0,
+				Minute:      0,
+				Second:      0,
+				MilliSecond: 0,
+				NanoSecond:  0,
+			},
+		},
+		DayOfWeeks: []time.Weekday{time.Sunday, time.Monday, time.Tuesday, time.Wednesday, time.Thursday, time.Friday, time.Saturday},
+		MonthDays:  []uint32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31},
+		Months:     []time.Month{time.January, time.February, time.March, time.April, time.May, time.June, time.July, time.August, time.September, time.October, time.November, time.December},
+		Years:      years,
+	}
 }
