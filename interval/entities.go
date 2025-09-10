@@ -36,6 +36,9 @@ type IntervalOption struct {
 	EndDate       *time.Time
 	FrequencyUnit Frequency
 	IntervalValue uint32
+	MonthEnd      bool
+	ByDay         []int
+	Wkst          time.Weekday
 }
 
 type Direction int32
