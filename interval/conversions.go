@@ -8,26 +8,6 @@ import (
 	"github.com/teambition/rrule-go"
 )
 
-func rruleWeekdayToTimeWeekday(wd rrule.Weekday) time.Weekday {
-	switch wd {
-	case rrule.SU:
-		return time.Sunday
-	case rrule.MO:
-		return time.Monday
-	case rrule.TU:
-		return time.Tuesday
-	case rrule.WE:
-		return time.Wednesday
-	case rrule.TH:
-		return time.Thursday
-	case rrule.FR:
-		return time.Friday
-	case rrule.SA:
-		return time.Saturday
-	}
-	return time.Sunday // Should not happen
-}
-
 func convertRRULEtoIntervaler(ruleString string) (*IntervalOption, error) {
 	ro, err := rrule.StrToROption(ruleString)
 	if err != nil {
@@ -38,21 +18,9 @@ func convertRRULEtoIntervaler(ruleString string) (*IntervalOption, error) {
 		return nil, err
 	}
 
-	var monthEnd bool
-	if len(ro.Bymonthday) == 1 && ro.Bymonthday[0] == -1 {
-		monthEnd = true
-	} else if len(ro.Bymonth) > 0 || len(ro.Byweekno) > 0 || len(ro.Byyearday) > 0 || len(ro.Bymonthday) > 0 || len(ro.Bysetpos) > 0 || len(ro.Byhour) > 0 || len(ro.Byminute) > 0 || len(ro.Bysecond) > 0 {
-		return nil, errors.New("unsupported rrule feature: BY* rules other than BYMONTHDAY=-1 and BYDAY are not yet supported")
+	if len(ro.Bymonth) > 0 || len(ro.Byweekno) > 0 || len(ro.Byyearday) > 0 || len(ro.Bymonthday) > 0 || len(ro.Byweekday) > 0 || len(ro.Bysetpos) > 0 || len(ro.Byhour) > 0 || len(ro.Byminute) > 0 || len(ro.Bysecond) > 0 {
+		return nil, errors.New("unsupported rrule feature: BY* rules are not yet supported")
 	}
-
-	var byDay []int
-	if len(ro.Byweekday) > 0 {
-		for _, wd := range ro.Byweekday {
-			byDay = append(byDay, int(rruleWeekdayToTimeWeekday(wd)))
-		}
-	}
-
-	wkst := rruleWeekdayToTimeWeekday(ro.Wkst)
 
 	var freq Frequency
 	switch ro.Freq {
@@ -91,13 +59,11 @@ func convertRRULEtoIntervaler(ruleString string) (*IntervalOption, error) {
 	} else if ro.Count > 0 {
 		all := r.All()
 		if len(all) > 0 {
-			var newAll []time.Time
+			// Workaround for rrule-go bug where COUNT is not respected in some cases.
 			if len(all) > ro.Count {
-				newAll = all[:ro.Count]
-			} else {
-				newAll = all
+				all = all[:ro.Count]
 			}
-			lastDate := newAll[len(newAll)-1]
+			lastDate := all[len(all)-1]
 			endDate = &lastDate
 		}
 	}
@@ -108,9 +74,6 @@ func convertRRULEtoIntervaler(ruleString string) (*IntervalOption, error) {
 		EndDate:       endDate,
 		FrequencyUnit: freq,
 		IntervalValue: interval,
-		MonthEnd:      monthEnd,
-		ByDay:         byDay,
-		Wkst:          wkst,
 	}, nil
 }
 

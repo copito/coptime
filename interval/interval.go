@@ -15,17 +15,8 @@ func New(option IntervalOption) Intervaler {
 	startDate := defaultStartTime(option.StartDate, anchorDate)
 	frequencyUnit := defaultFrequencyUnit(option.FrequencyUnit)
 	intervalValue := defaultIntervalValue(option.IntervalValue)
-	monthEnd := option.MonthEnd
 
 	// TODO: Validate
-
-	if monthEnd {
-		year, month, _ := anchorDate.Date()
-		firstOfNextMonth := time.Date(year, month+1, 1, anchorDate.Hour(), anchorDate.Minute(), anchorDate.Second(), anchorDate.Nanosecond(), anchorDate.Location())
-		lastOfMonth := firstOfNextMonth.AddDate(0, 0, -1)
-		anchorDate = time.Date(lastOfMonth.Year(), lastOfMonth.Month(), lastOfMonth.Day(), anchorDate.Hour(), anchorDate.Minute(), anchorDate.Second(), anchorDate.Nanosecond(), anchorDate.Location())
-		startDate = &anchorDate
-	}
 
 	intervalOption := IntervalOption{
 		AnchorDate:    anchorDate,
@@ -33,9 +24,6 @@ func New(option IntervalOption) Intervaler {
 		EndDate:       option.EndDate,
 		FrequencyUnit: frequencyUnit,
 		IntervalValue: intervalValue,
-		MonthEnd:      monthEnd,
-		ByDay:         option.ByDay,
-		Wkst:          option.Wkst,
 	}
 
 	return Intervaler{
@@ -130,13 +118,13 @@ func (i *Intervaler) calculateNext(previousTime time.Time, direction Direction) 
 
 	case FrequencyWeek:
 		// Align to anchor weekday/time; weeks are multiples of 7 days from anchor
-		return nextFromAnchorWeeks(anchor, previousTime, iv, step, i.opt.ByDay, i.opt.Wkst)
+		return nextFromAnchorWeeks(anchor, previousTime, iv, step)
 
 	case FrequencyMonth:
-		return nextFromAnchorMonths(anchor, previousTime, iv, step, i.opt.MonthEnd)
+		return nextFromAnchorMonths(anchor, previousTime, iv, step)
 
 	case FrequencyQuarter:
-		return nextFromAnchorMonths(anchor, previousTime, 3*iv, step, false)
+		return nextFromAnchorMonths(anchor, previousTime, 3*iv, step)
 
 	case FrequencyYear:
 		return nextFromAnchorYears(anchor, previousTime, iv, step)
@@ -203,14 +191,12 @@ func (i *Intervaler) Iterate(direction Direction, maxAttempt *int32) (iter.Seq[t
 
 	// high level check
 	// TODO: revalidate here
-	if !i.opt.MonthEnd {
-		if direction == DirectionForward && i.opt.AnchorDate.After(*i.opt.StartDate) {
-			return nil, errors.New("anchor day cannot be after start day with FORWARD")
-		}
+	if direction == DirectionForward && i.opt.AnchorDate.After(*i.opt.StartDate) {
+		return nil, errors.New("anchor day cannot be after start day with FORWARD")
+	}
 
-		if direction == DirectionBackward && i.opt.AnchorDate.Before(*i.opt.StartDate) {
-			return nil, errors.New("anchor day cannot be before start day with BACKWARD")
-		}
+	if direction == DirectionBackward && i.opt.AnchorDate.Before(*i.opt.StartDate) {
+		return nil, errors.New("anchor day cannot be before start day with BACKWARD")
 	}
 
 	if direction == DirectionForward && i.opt.AnchorDate.After(endDate) {
@@ -228,11 +214,9 @@ func (i *Intervaler) Iterate(direction Direction, maxAttempt *int32) (iter.Seq[t
 
 	return func(yield func(time.Time) bool) {
 		if currentValue.Equal(*i.opt.StartDate) {
-			if direction == DirectionForward {
-				ok := yield(i.opt.AnchorDate)
-				if !ok {
-					return
-				}
+			ok := yield(i.opt.AnchorDate)
+			if !ok {
+				return
 			}
 		}
 

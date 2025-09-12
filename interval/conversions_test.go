@@ -70,111 +70,11 @@ func TestConvertRRULEtoIntervaler_YearlyWithUntil(t *testing.T) {
 	assert.Equal(t, time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC), *option.EndDate)
 }
 
-func TestConvertRRULEtoIntervaler_ByDay_Unsupported(t *testing.T) {
-	rruleString := "FREQ=MONTHLY;DTSTART=20240101T090000Z;BYMONTH=1"
+func TestConvertRRULEtoIntervaler_UnsupportedByRule(t *testing.T) {
+	rruleString := "FREQ=MONTHLY;DTSTART=20240101T090000Z;BYDAY=SU"
 	_, err := convertRRULEtoIntervaler(rruleString)
 	require.Error(t, err)
-	assert.Equal(t, "unsupported rrule feature: BY* rules other than BYMONTHDAY=-1 and BYDAY are not yet supported", err.Error())
-}
-
-func TestConvertRRULEtoIntervaler_MonthEnd(t *testing.T) {
-	rruleString := "FREQ=MONTHLY;DTSTART=20240115T090000Z;BYMONTHDAY=-1;COUNT=3"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
-
-	assert.True(t, option.MonthEnd)
-
-	iv := New(*option)
-	all, err := iv.All(DirectionForward, nil)
-	require.NoError(t, err)
-
-	expectedDates := []time.Time{
-		time.Date(2024, 1, 31, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 2, 29, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 3, 31, 9, 0, 0, 0, time.UTC),
-	}
-
-	require.Len(t, all, len(expectedDates))
-	for i, d := range expectedDates {
-		assert.Equal(t, d, all[i])
-	}
-}
-
-func TestConvertRRULEtoIntervaler_ByDay_Backward(t *testing.T) {
-	rruleString := "FREQ=WEEKLY;DTSTART=20240101T090000Z;BYDAY=MO,WE;INTERVAL=2;WKST=SU;COUNT=4"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
-
-	// Modify start date for backward iteration
-	endDate := time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC)
-	option.EndDate = &endDate
-	startDate := time.Date(2024, 1, 17, 9, 0, 0, 0, time.UTC)
-	option.StartDate = &startDate
-	option.AnchorDate = startDate
-
-	iv := New(*option)
-	all, err := iv.All(DirectionBackward, nil)
-	require.NoError(t, err)
-
-	expectedDates := []time.Time{
-		time.Date(2024, 1, 15, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 3, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
-	}
-
-	require.Len(t, all, len(expectedDates))
-	for i, d := range expectedDates {
-		assert.Equal(t, d, all[i])
-	}
-}
-
-func TestConvertRRULEtoIntervaler_ByDay_WithIntervalAndWkst(t *testing.T) {
-	rruleString := "FREQ=WEEKLY;DTSTART=20240101T090000Z;BYDAY=MO,WE;INTERVAL=2;WKST=SU;COUNT=4"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
-
-	iv := New(*option)
-	all, err := iv.All(DirectionForward, nil)
-	require.NoError(t, err)
-
-	expectedDates := []time.Time{
-		time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 3, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 15, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 17, 9, 0, 0, 0, time.UTC),
-	}
-
-	require.Len(t, all, len(expectedDates))
-	for i, d := range expectedDates {
-		assert.Equal(t, d, all[i])
-	}
-}
-
-func TestConvertRRULEtoIntervaler_ByDay(t *testing.T) {
-	rruleString := "FREQ=WEEKLY;DTSTART=20240101T090000Z;BYDAY=MO,WE,FR;COUNT=5"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
-
-	iv := New(*option)
-	all, err := iv.All(DirectionForward, nil)
-	require.NoError(t, err)
-
-	expectedDates := []time.Time{
-		time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 3, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 5, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 8, 9, 0, 0, 0, time.UTC),
-		time.Date(2024, 1, 10, 9, 0, 0, 0, time.UTC),
-	}
-
-	require.Len(t, all, len(expectedDates))
-	for i, d := range expectedDates {
-		assert.Equal(t, d, all[i])
-	}
+	assert.Equal(t, "unsupported rrule feature: BY* rules are not yet supported", err.Error())
 }
 
 func TestConvertRRULEtoIntervaler_NoDtstart(t *testing.T) {
