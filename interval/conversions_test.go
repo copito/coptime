@@ -83,3 +83,33 @@ func TestConvertRRULEtoIntervaler_NoDtstart(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, "rrule must have a DTSTART", err.Error())
 }
+
+func TestConvertRRULEtoIntervaler_Minutely(t *testing.T) {
+	rruleString := "FREQ=MINUTELY;INTERVAL=1;DTSTART=20240101T090000Z;UNTIL=20270101T090000Z"
+	option, err := convertRRULEtoIntervaler(rruleString)
+	require.NoError(t, err)
+	require.NotNil(t, option)
+
+	assert.Equal(t, FrequencyMinute, option.FrequencyUnit)
+	assert.Equal(t, uint32(1), option.IntervalValue)
+	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), option.AnchorDate)
+	require.NotNil(t, option.StartDate)
+	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), *option.StartDate)
+	require.NotNil(t, option.EndDate)
+	assert.Equal(t, time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC), *option.EndDate)
+}
+
+func TestConvertRRULEtoIntervaler_Secondly(t *testing.T) {
+	rruleString := "FREQ=SECONDLY;INTERVAL=1;DTSTART=20240101T090000Z;UNTIL=20270101T090000Z"
+	option, err := convertRRULEtoIntervaler(rruleString)
+	require.NoError(t, err)
+	require.NotNil(t, option)
+
+	assert.Equal(t, FrequencySecond, option.FrequencyUnit)
+	assert.Equal(t, uint32(1), option.IntervalValue)
+	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), option.AnchorDate)
+	require.NotNil(t, option.StartDate)
+	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), *option.StartDate)
+	require.NotNil(t, option.EndDate)
+	assert.Equal(t, time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC), *option.EndDate)
+}
