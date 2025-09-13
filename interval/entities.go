@@ -34,6 +34,7 @@ type IntervalOption struct {
 	AnchorDate    time.Time
 	StartDate     *time.Time
 	EndDate       *time.Time
+	Size          *float64
 	FrequencyUnit Frequency
 	IntervalValue uint32
 }
