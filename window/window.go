@@ -20,6 +20,20 @@ func New(option WindowOption) Windower {
 	}
 }
 
+func FromRRULE(rruleString string) (*Windower, error) {
+	option, err := convertRRULEtoWindowOption(rruleString)
+	if err != nil {
+		return nil, err
+	}
+
+	if option == nil {
+		return nil, errors.New("options for Intervaler are empty")
+	}
+
+	iv := New(*option)
+	return &iv, nil
+}
+
 func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (iter.Seq[common.WindowResult], error) {
 	tz := w.opt.AnchorDate.Location()
 	if tz == nil {
