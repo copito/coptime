@@ -12,6 +12,8 @@ const (
 type WindowOption struct {
 	interval.IntervalOption
 
+	Size float64
+
 	// All rules applied on top of the windows
 	Rules []rules.Rule
 }

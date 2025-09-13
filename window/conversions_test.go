@@ -1,4 +1,4 @@
-package interval
+package window
 
 import (
 	"testing"
