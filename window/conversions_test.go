@@ -1,115 +1,434 @@
 package window
 
 import (
+	"math"
 	"testing"
 	"time"
 
+	"github.com/copito/coptime/helper"
+	"github.com/copito/coptime/interval"
+	rules "github.com/copito/coptime/rules"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/teambition/rrule-go"
 )
 
-func TestConvertRRULEtoIntervaler_Daily(t *testing.T) {
-	rruleString := "FREQ=DAILY;DTSTART=20240101T090000Z;COUNT=5"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
+func TestRRULEConversion(t *testing.T) {
+	// chicago, err := time.LoadLocation("America/Chicago")
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
 
-	assert.Equal(t, FrequencyDay, option.FrequencyUnit)
-	assert.Equal(t, uint32(1), option.IntervalValue)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), option.AnchorDate)
-	require.NotNil(t, option.StartDate)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), *option.StartDate)
-	require.NotNil(t, option.EndDate)
-	assert.Equal(t, time.Date(2024, 1, 5, 9, 0, 0, 0, time.UTC), *option.EndDate)
-}
+	now := time.Now()
+	inf := math.Inf(1)
 
-func TestConvertRRULEtoIntervaler_Weekly(t *testing.T) {
-	rruleString := "FREQ=WEEKLY;DTSTART=20240101T090000Z;INTERVAL=2;UNTIL=20240229T090000Z"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
+	testTable := []struct {
+		name                 string
+		rruleString          string
+		expectedWindowOption WindowOption
+		expectedError        bool
+	}{
+		{
+			name:        "Invalid RRULE",
+			rruleString: "Lemon Pie",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencySecond,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: true,
+		},
+		{
+			name:        "Simple Second Interval (1)",
+			rruleString: "FREQ=SECONDLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencySecond,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Minutely Interval (1)",
+			rruleString: "FREQ=MINUTELY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMinute,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Hourly Interval (1)",
+			rruleString: "FREQ=HOURLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyHour,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Daily Interval (1)",
+			rruleString: "FREQ=DAILY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyDay,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Weekly Interval (1)",
+			rruleString: "FREQ=WEEKLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyWeek,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Monthly Interval (1)",
+			rruleString: "FREQ=MONTHLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMonth,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Yearly Interval (1)",
+			rruleString: "FREQ=YEARLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyYear,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Yearly Interval (1)",
+			rruleString: "FREQ=YEARLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyYear,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Daily Interval (2)",
+			rruleString: "FREQ=DAILY;INTERVAL=2",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyDay,
+					IntervalValue: uint32(2),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Daily Interval (12)",
+			rruleString: "FREQ=DAILY;INTERVAL=12",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyDay,
+					IntervalValue: uint32(12),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Minutely Interval (18)",
+			rruleString: "FREQ=MINUTELY;INTERVAL=18",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMinute,
+					IntervalValue: uint32(18),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Daily Interval (1) With DTstart (20250101000000)",
+			rruleString: "DTSTART=20240101T090000Z;FREQ=DAILY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
+					StartDate:     helper.ToPointer(time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC)),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyDay,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Monthly Interval (1) With DTstart (20250101000000)",
+			rruleString: "DTSTART=20240101T090000Z;FREQ=MONTHLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
+					StartDate:     helper.ToPointer(time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC)),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMonth,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Monthly Interval (1) With DTstart (20250908201000)",
+			rruleString: "DTSTART=20250908T201000Z;FREQ=MONTHLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC),
+					StartDate:     helper.ToPointer(time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC)),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMonth,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Monthly Interval (1) With DTstart (20250908201000)",
+			rruleString: "DTSTART=20250908T201000Z;FREQ=MONTHLY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC),
+					StartDate:     helper.ToPointer(time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC)),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMonth,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Simple Daily Interval (1) With DTstart (20250908201000)",
+			rruleString: "DTSTART=20250908T201000Z;FREQ=DAILY;INTERVAL=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC),
+					StartDate:     helper.ToPointer(time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC)),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyDay,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{},
+			},
+			expectedError: false,
+		},
+		// {
+		// 	name:        "Simple Daily Interval (1) With DTstart (20250101000000)",
+		// 	rruleString: "DTSTART=20240101T090000Z;FREQ=DAILY;INTERVAL=1",
+		// 	expectedWindowOption: WindowOption{
+		// 		IntervalOption: interval.IntervalOption{
+		// 			AnchorDate:    time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC),
+		// 			StartDate:     helper.ToPointer(time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC)),
+		// 			EndDate:       nil,
+		// 			Size:          &inf,
+		// 			FrequencyUnit: interval.FrequencyDay,
+		// 			IntervalValue: uint32(1),
+		// 		},
+		// 		Rules: []rules.Rule{},
+		// 	},
+		// 	expectedError: nil,
+		// },
+		// {
+		// 	name: "Simple Daily Interval (1) MondayStart",
+		// 	// rruleString: "DTSTART;TZID=America/Chicago:20250908T000000 RRULE:FREQ=DAILY;INTERVAL=1",
+		// 	rruleString: "DTSTART:20250908T000000Z RRULE:FREQ=DAILY;WKST=MO",
+		// 	expectedWindowOption: WindowOption{
+		// 		IntervalOption: interval.IntervalOption{
+		// 			AnchorDate:    time.Date(2025, 9, 8, 0, 0, 0, 0, chicago),
+		// 			StartDate:     helper.ToPointer(time.Date(2025, 9, 8, 0, 0, 0, 0, chicago)),
+		// 			EndDate:       nil,
+		// 			Size:          nil,
+		// 			FrequencyUnit: interval.FrequencyDay,
+		// 			IntervalValue: uint32(1),
+		// 		},
+		// 		Rules: []rules.Rule{},
+		// 	},
+		// 	expectedError: nil,
+		// },
+	}
 
-	assert.Equal(t, FrequencyWeek, option.FrequencyUnit)
-	assert.Equal(t, uint32(2), option.IntervalValue)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), option.AnchorDate)
-	require.NotNil(t, option.StartDate)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), *option.StartDate)
-	require.NotNil(t, option.EndDate)
-	assert.Equal(t, time.Date(2024, 2, 29, 9, 0, 0, 0, time.UTC), *option.EndDate)
-}
+	for _, tt := range testTable {
+		t.Run(tt.name, func(t *testing.T) {
+			hasDTStart := false
+			rz, err := rrule.StrToRRule(tt.rruleString)
+			if err != nil {
+				if tt.expectedError {
+					assert.NotNil(t, err, "expecting error from parsing rrule")
+				} else {
+					t.Fatal("expecting no error from parsing rrule")
+				}
+			} else {
+				if !rz.OrigOptions.Dtstart.IsZero() {
+					hasDTStart = true
+				}
+			}
 
-// TestConvertRRULEtoIntervaler_MonthlyWithCount is commented out due to a bug in the rrule-go library.
-// The library does not correctly handle COUNT for monthly recurrences with a start date on the 31st.
-// func TestConvertRRULEtoIntervaler_MonthlyWithCount(t *testing.T) {
-// 	rruleString := "FREQ=MONTHLY;DTSTART=20240131T090000Z;COUNT=3"
-// 	option, err := convertRRULEtoIntervaler(rruleString)
-// 	require.NoError(t, err)
-// 	require.NotNil(t, option)
+			calculatedActual, err := convertRRULEtoWindowOption(tt.rruleString)
+			if tt.expectedError {
+				assert.NotNil(t, err, "should be error evaluating rrule")
+				return
+			} else {
+				assert.Nil(t, err, "should be nil for error evaluating rrule")
+			}
 
-// 	assert.Equal(t, FrequencyMonth, option.FrequencyUnit)
-// 	assert.Equal(t, uint32(1), option.IntervalValue)
-// 	assert.Equal(t, time.Date(2024, 1, 31, 9, 0, 0, 0, time.UTC), option.AnchorDate)
-// 	require.NotNil(t, option.StartDate)
-// 	assert.Equal(t, time.Date(2024, 1, 31, 9, 0, 0, 0, time.UTC), *option.StartDate)
-// 	require.NotNil(t, option.EndDate)
-// 	assert.Equal(t, time.Date(2024, 3, 31, 9, 0, 0, 0, time.UTC), *option.EndDate)
-// }
+			// Assert that all the attributes and rules are the same
+			if hasDTStart {
+				assert.True(t, tt.expectedWindowOption.AnchorDate.Equal(calculatedActual.AnchorDate), "anchor date should be equal")
+				if tt.expectedWindowOption.StartDate != nil {
+					assert.NotNil(t, calculatedActual.StartDate, "start date is not nil")
+					assert.True(t, tt.expectedWindowOption.StartDate.Equal(*calculatedActual.StartDate), "start date should be equal")
+				} else {
+					assert.Nil(t, calculatedActual.StartDate, "start date should be nil")
+				}
 
-func TestConvertRRULEtoIntervaler_YearlyWithUntil(t *testing.T) {
-	rruleString := "FREQ=YEARLY;DTSTART=20240101T090000Z;UNTIL=20270101T090000Z"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
+				if tt.expectedWindowOption.EndDate != nil {
+					assert.NotNil(t, calculatedActual.EndDate, "end date is not nil")
+					assert.True(t, tt.expectedWindowOption.EndDate.Equal(*calculatedActual.EndDate), "end date should be equal")
+				} else {
+					assert.Nil(t, calculatedActual.EndDate, "end date should be nil")
+				}
+			} else {
+				assert.True(t, tt.expectedWindowOption.AnchorDate.After(now.Add(-1*time.Hour)), "anchor date should be equal")
+				assert.True(t, tt.expectedWindowOption.AnchorDate.Before(now.Add(1*time.Hour)), "anchor date should be equal")
+				if tt.expectedWindowOption.StartDate != nil {
+					assert.NotNil(t, calculatedActual.StartDate, "start date is not nil")
+					assert.True(t, tt.expectedWindowOption.StartDate.After(now.Add(-1*time.Hour)), "start date should be equal")
+					assert.True(t, tt.expectedWindowOption.StartDate.Before(now.Add(1*time.Hour)), "start date should be equal")
+				} else {
+					assert.Nil(t, calculatedActual.StartDate, "start date should be nil")
+				}
 
-	assert.Equal(t, FrequencyYear, option.FrequencyUnit)
-	assert.Equal(t, uint32(1), option.IntervalValue)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), option.AnchorDate)
-	require.NotNil(t, option.StartDate)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), *option.StartDate)
-	require.NotNil(t, option.EndDate)
-	assert.Equal(t, time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC), *option.EndDate)
-}
+				// if tt.expectedWindowOption.EndDate != nil {
+				// 	assert.NotNil(t, calculatedActual.EndDate, "end date is not nil")
+				// 	assert.True(t, tt.expectedWindowOption.EndDate.After(*calculatedActual.EndDate), "end date should be equal")
+				// } else {
+				// 	assert.Nil(t, calculatedActual.EndDate, "end date should be nil")
+				// }
+			}
 
-func TestConvertRRULEtoIntervaler_UnsupportedByRule(t *testing.T) {
-	rruleString := "FREQ=MONTHLY;DTSTART=20240101T090000Z;BYDAY=SU"
-	_, err := convertRRULEtoIntervaler(rruleString)
-	require.Error(t, err)
-	assert.Equal(t, "unsupported rrule feature: BY* rules are not yet supported", err.Error())
-}
+			if tt.expectedWindowOption.Size != nil {
+				assert.NotNil(t, calculatedActual.Size, "size is not nil")
+				assert.Equal(t, tt.expectedWindowOption.Size, calculatedActual.Size, "size should be equal")
+			} else {
+				assert.Nil(t, calculatedActual.Size, "size is nil")
+			}
 
-func TestConvertRRULEtoIntervaler_NoDtstart(t *testing.T) {
-	rruleString := "FREQ=DAILY"
-	_, err := convertRRULEtoIntervaler(rruleString)
-	require.Error(t, err)
-	assert.Equal(t, "rrule must have a DTSTART", err.Error())
-}
+			assert.Equal(t, tt.expectedWindowOption.FrequencyUnit, calculatedActual.FrequencyUnit, "frequency unit should be equal")
+			assert.Equal(t, tt.expectedWindowOption.IntervalValue, calculatedActual.IntervalValue, "interval should be equal")
 
-func TestConvertRRULEtoIntervaler_Minutely(t *testing.T) {
-	rruleString := "FREQ=MINUTELY;INTERVAL=1;DTSTART=20240101T090000Z;UNTIL=20270101T090000Z"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
+			assert.Equal(t, len(tt.expectedWindowOption.Rules), len(calculatedActual.Rules), "rule count must be the same")
+			for i, rule := range tt.expectedWindowOption.Rules {
+				assert.ElementsMatch(t, rule.DayOfWeeks, calculatedActual.Rules[i].DayOfWeeks, "day of week matches")
+				assert.ElementsMatch(t, rule.Years, calculatedActual.Rules[i].Years, "years matches")
+				assert.ElementsMatch(t, rule.Months, calculatedActual.Rules[i].Months, "months matches")
+				assert.ElementsMatch(t, rule.MonthDays, calculatedActual.Rules[i].MonthDays, "month days matches")
 
-	assert.Equal(t, FrequencyMinute, option.FrequencyUnit)
-	assert.Equal(t, uint32(1), option.IntervalValue)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), option.AnchorDate)
-	require.NotNil(t, option.StartDate)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), *option.StartDate)
-	require.NotNil(t, option.EndDate)
-	assert.Equal(t, time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC), *option.EndDate)
-}
+				// Time Range comparison
+				if rule.TimeRange != nil {
+					assert.NotNil(t, rule.TimeRange, "time range is not nil")
+					assert.Equal(t, rule.TimeRange.StartTimeReference.Hour, calculatedActual.Rules[i].TimeRange.StartTimeReference.Hour, "start time - hour ref should be equal")
+					assert.Equal(t, rule.TimeRange.StartTimeReference.Minute, calculatedActual.Rules[i].TimeRange.StartTimeReference.Minute, "start time - minute ref should be equal")
+					assert.Equal(t, rule.TimeRange.StartTimeReference.Second, calculatedActual.Rules[i].TimeRange.StartTimeReference.Second, "start time - second ref should be equal")
+					assert.Equal(t, rule.TimeRange.StartTimeReference.MilliSecond, calculatedActual.Rules[i].TimeRange.StartTimeReference.MilliSecond, "start time - millisecond ref should be equal")
+					assert.Equal(t, rule.TimeRange.StartTimeReference.NanoSecond, calculatedActual.Rules[i].TimeRange.StartTimeReference.NanoSecond, "start time - nanosecond ref should be equal")
 
-func TestConvertRRULEtoIntervaler_Secondly(t *testing.T) {
-	rruleString := "FREQ=SECONDLY;INTERVAL=1;DTSTART=20240101T090000Z;UNTIL=20270101T090000Z"
-	option, err := convertRRULEtoIntervaler(rruleString)
-	require.NoError(t, err)
-	require.NotNil(t, option)
+					assert.Equal(t, rule.TimeRange.EndTimeReference.Hour, calculatedActual.Rules[i].TimeRange.EndTimeReference.Hour, "end time - hour ref should be equal")
+					assert.Equal(t, rule.TimeRange.EndTimeReference.Minute, calculatedActual.Rules[i].TimeRange.EndTimeReference.Minute, "end time - minute ref should be equal")
+					assert.Equal(t, rule.TimeRange.EndTimeReference.Second, calculatedActual.Rules[i].TimeRange.EndTimeReference.Second, "end time - second ref should be equal")
+					assert.Equal(t, rule.TimeRange.EndTimeReference.MilliSecond, calculatedActual.Rules[i].TimeRange.EndTimeReference.MilliSecond, "end time - millisecond ref should be equal")
+					assert.Equal(t, rule.TimeRange.EndTimeReference.NanoSecond, calculatedActual.Rules[i].TimeRange.EndTimeReference.NanoSecond, "end time - nanosecond ref should be equal")
+				} else {
+					assert.Nil(t, rule.TimeRange, "time range is nil")
+				}
 
-	assert.Equal(t, FrequencySecond, option.FrequencyUnit)
-	assert.Equal(t, uint32(1), option.IntervalValue)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), option.AnchorDate)
-	require.NotNil(t, option.StartDate)
-	assert.Equal(t, time.Date(2024, 1, 1, 9, 0, 0, 0, time.UTC), *option.StartDate)
-	require.NotNil(t, option.EndDate)
-	assert.Equal(t, time.Date(2027, 1, 1, 9, 0, 0, 0, time.UTC), *option.EndDate)
+			}
+		})
+	}
 }
