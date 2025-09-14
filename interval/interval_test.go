@@ -219,6 +219,19 @@ func TestCalculateNext(t *testing.T) {
 			direction:    DirectionForward,
 			expected:     time.Date(2025, 3, 2, 0, 0, 0, 0, time.UTC),
 		},
+		{
+			name: "weekly 1 with 2025-09-08 20:10:00 anchor with previous 2025-01-01",
+			opt: IntervalOption{
+				AnchorDate:    time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC),
+				StartDate:     helper.ToPointer(time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC)),
+				EndDate:       nil,
+				FrequencyUnit: FrequencyWeek,
+				IntervalValue: 1,
+			},
+			previousTime: time.Date(2025, 9, 8, 20, 10, 0, 0, time.UTC),
+			direction:    DirectionForward,
+			expected:     time.Date(2025, 9, 15, 20, 10, 0, 0, time.UTC),
+		},
 	}
 
 	for _, tt := range testTable {
