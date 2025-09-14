@@ -3,6 +3,7 @@ package interval
 import (
 	"errors"
 	"iter"
+	"math"
 	"time"
 )
 
@@ -15,13 +16,13 @@ func New(option IntervalOption) Intervaler {
 	startDate := defaultStartTime(option.StartDate, anchorDate)
 	frequencyUnit := defaultFrequencyUnit(option.FrequencyUnit)
 	intervalValue := defaultIntervalValue(option.IntervalValue)
-
-	// TODO: Validate
+	var count float64 = math.Inf(1)
 
 	intervalOption := IntervalOption{
 		AnchorDate:    anchorDate,
 		StartDate:     startDate,
 		EndDate:       option.EndDate,
+		Size:          &count,
 		FrequencyUnit: frequencyUnit,
 		IntervalValue: intervalValue,
 	}
@@ -29,20 +30,6 @@ func New(option IntervalOption) Intervaler {
 	return Intervaler{
 		opt: intervalOption,
 	}
-}
-
-func FromRRULE(rruleString string) (*Intervaler, error) {
-	option, err := convertRRULEtoIntervaler(rruleString)
-	if err != nil {
-		return nil, err
-	}
-
-	if option == nil {
-		return nil, errors.New("options for Intervaler are empty")
-	}
-
-	iv := New(*option)
-	return &iv, nil
 }
 
 // func (i *Intervaler) calculateNext(previousTime time.Time, direction Direction) time.Time {

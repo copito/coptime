@@ -7,6 +7,7 @@ import (
 
 const (
 	DEFAULT_MAX_ATTEMPTS int32 = 10_000
+	MAX_LIST_SIZE              = 25_000
 )
 
 type WindowOption struct {
