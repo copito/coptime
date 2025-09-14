@@ -16,11 +16,11 @@ func convertRRULEtoWindowOption(ruleString string) (*WindowOption, error) {
 		return nil, err
 	}
 
-	if len(rr.Options.Bymonth) > 0 || len(rr.Options.Byweekno) > 0 || len(rr.Options.Byyearday) > 0 ||
-		len(rr.Options.Bymonthday) > 0 || len(rr.Options.Byweekday) > 0 || len(rr.Options.Bysetpos) > 0 ||
-		len(rr.Options.Byhour) > 0 || len(rr.Options.Byminute) > 0 || len(rr.Options.Bysecond) > 0 {
-		return nil, errors.New("unsupported rrule feature: BY* rules are not yet supported")
-	}
+	// if len(rr.Options.Bymonth) > 0 || len(rr.Options.Byweekno) > 0 || len(rr.Options.Byyearday) > 0 ||
+	// 	len(rr.Options.Bymonthday) > 0 || len(rr.Options.Byweekday) > 0 || len(rr.Options.Bysetpos) > 0 ||
+	// 	len(rr.Options.Byhour) > 0 || len(rr.Options.Byminute) > 0 || len(rr.Options.Bysecond) > 0 {
+	// 	return nil, errors.New("unsupported rrule feature: BY* rules are not yet supported")
+	// }
 
 	var freq interval.Frequency
 	switch rr.Options.Freq {
