@@ -432,3 +432,26 @@ func TestRRULEConversion(t *testing.T) {
 		})
 	}
 }
+
+// func TestHelperDebugConversionRRULE(t *testing.T) {
+// 	rruleString := "DTSTART=20250908T201000Z;FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=WE"
+// 	calculatedActual, err := convertRRULEtoWindowOption(rruleString)
+// 	if err != nil {
+// 		t.Fatal("error")
+// 	}
+
+// 	fmt.Println(calculatedActual)
+// 	ww := New(*calculatedActual)
+// 	windows, _ := ww.Between(
+// 		interval.DirectionForward,
+// 		time.Date(2025, 9, 8, 0, 0, 0, 0, time.UTC),
+// 		time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC),
+// 		nil,
+// 	)
+
+// 	for _, value := range windows {
+// 		fmt.Printf("value.Start: %s\n", value.Start)
+// 		fmt.Printf("value.End: %s\n", value.End)
+// 		fmt.Printf("value.SubWindow: %s\n", value.SubWindow)
+// 	}
+// }

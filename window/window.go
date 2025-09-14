@@ -2,6 +2,7 @@ package window
 
 import (
 	"errors"
+	"fmt"
 	"iter"
 	"time"
 
@@ -32,6 +33,59 @@ func FromRRULE(rruleString string) (*Windower, error) {
 
 	iv := New(*option)
 	return &iv, nil
+}
+
+func (w *Windower) estimateIntervalSize(startTime time.Time, endTime time.Time, freq interval.Frequency, intervalValue int32) int32 {
+	var realStartTime, realEndTime time.Time
+	if startTime.Equal(endTime) {
+		return 1
+	} else if startTime.Before(endTime) {
+		realStartTime = startTime
+		realEndTime = endTime
+	} else if startTime.After(endTime) {
+		realStartTime = endTime
+		realEndTime = startTime
+	}
+
+	diff := realEndTime.Sub(realStartTime)
+	var periods int32
+
+	switch freq {
+	case interval.FrequencyNanoSecond:
+		diffRef := diff.Nanoseconds()
+		periods = int32(diffRef/int64(intervalValue)) + 1
+	case interval.FrequencyMilliSecond:
+		diffRef := diff.Milliseconds()
+		periods = int32(diffRef/int64(intervalValue)) + 1
+	case interval.FrequencySecond:
+		diffRef := diff.Seconds()
+		periods = int32(diffRef/float64(intervalValue)) + 1
+	case interval.FrequencyMinute:
+		diffRef := diff.Minutes()
+		periods = int32(diffRef/float64(intervalValue)) + 1
+	case interval.FrequencyHour:
+		diffRef := diff.Hours()
+		periods = int32(diffRef/float64(intervalValue)) + 1
+	case interval.FrequencyDay:
+		diffRef := diff.Hours() / 24
+		periods = int32(diffRef/float64(intervalValue)) + 1
+	case interval.FrequencyWeek:
+		diffRef := diff.Hours() / 24 / 7
+		periods = int32(diffRef/float64(intervalValue)) + 1
+	case interval.FrequencyMonth:
+		diffRef := diff.Hours() / 24 / 30
+		periods = int32(diffRef/float64(intervalValue)) + 4
+	case interval.FrequencyQuarter:
+		diffRef := diff.Hours() / 24 / 30 / 3
+		periods = int32(diffRef/float64(intervalValue)) + 4
+	case interval.FrequencyYear:
+		diffRef := diff.Hours() / 24 / 365
+		periods = int32(diffRef/float64(intervalValue)) + 4
+	default:
+		periods = 10
+	}
+
+	return periods
 }
 
 func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (iter.Seq[common.WindowResult], error) {
@@ -136,7 +190,37 @@ func (w *Windower) All(direction interval.Direction, maxAttempt *int32) ([]commo
 	return nil, nil
 }
 
+func (w *Windower) isWindowBetweenTimes(window common.WindowResult, startTime time.Time, endTime time.Time) bool {
+	// Entire window must be inside the start and end time
+	// Optional: normalize zones to avoid Location diffs
+	ws, we := window.Start.In(time.UTC), window.End.In(time.UTC)
+	s, e := startTime.In(time.UTC), endTime.In(time.UTC)
+
+	if e.Before(s) { // bad range
+		return false
+	}
+
+	return (ws.After(s) || ws.Equal(s)) && (we.Before(e) || we.Equal(e))
+}
+
 func (w *Windower) Between(direction interval.Direction, startTime time.Time, endTime time.Time, maxAttempt *int32) ([]common.WindowResult, error) {
-	// panic("unimplemented")
-	return nil, nil
+	estimatePeriods := w.estimateIntervalSize(startTime, endTime, w.opt.FrequencyUnit, int32(w.opt.IntervalValue))
+
+	if estimatePeriods >= MAX_LIST_SIZE {
+		return []common.WindowResult{}, fmt.Errorf("maximum size is %v - please select a smaller range", MAX_LIST_SIZE)
+	}
+
+	list := make([]common.WindowResult, 0, estimatePeriods*2)
+	iterator, err := w.Iterate(direction, maxAttempt)
+	if err != nil {
+		return []common.WindowResult{}, err
+	}
+
+	for value := range iterator {
+		if w.isWindowBetweenTimes(value, startTime, endTime) {
+			list = append(list, value)
+		}
+	}
+
+	return list, nil
 }
