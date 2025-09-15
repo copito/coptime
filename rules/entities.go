@@ -42,4 +42,5 @@ type Rule struct {
 	MonthDays    []uint32
 	Months       []time.Month
 	Years        []uint32
+	SetPos       []int
 }

@@ -387,6 +387,50 @@ func TestRRULEConversion(t *testing.T) {
 			},
 			expectedError: false,
 		},
+		{
+			name:        "Yearly on the 15th of January",
+			rruleString: "FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=15",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyYear,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{
+					{
+						IntervalType: rules.RuleTypeInclusion,
+						Months:       []time.Month{time.January},
+						MonthDays:    []uint32{15},
+					},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Monthly on the last day of the month",
+			rruleString: "FREQ=MONTHLY;BYMONTHDAY=28,29,30,31;BYSETPOS=-1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMonth,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{
+					{
+						IntervalType: rules.RuleTypeInclusion,
+						MonthDays:    []uint32{28, 29, 30, 31},
+						SetPos:       []int{-1},
+					},
+				},
+			},
+			expectedError: false,
+		},
 		// {
 		// 	name:        "Simple Daily Interval (1) With DTstart (20250101000000)",
 		// 	rruleString: "DTSTART=20240101T090000Z;FREQ=DAILY;INTERVAL=1",
@@ -497,6 +541,7 @@ func TestRRULEConversion(t *testing.T) {
 				assert.ElementsMatch(t, rule.Years, calculatedActual.Rules[i].Years, "years matches")
 				assert.ElementsMatch(t, rule.Months, calculatedActual.Rules[i].Months, "months matches")
 				assert.ElementsMatch(t, rule.MonthDays, calculatedActual.Rules[i].MonthDays, "month days matches")
+				assert.ElementsMatch(t, rule.SetPos, calculatedActual.Rules[i].SetPos, "set pos matches")
 
 				// Time Range comparison
 				if rule.TimeRange != nil {

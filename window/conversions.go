@@ -120,6 +120,11 @@ func convertRRULEtoWindowOption(ruleString string) (*WindowOption, error) {
 		hasRule = true
 	}
 
+	if len(rr.OrigOptions.Bysetpos) != 0 {
+		rule.SetPos = rr.OrigOptions.Bysetpos
+		hasRule = true
+	}
+
 	if hasRule {
 		rulesList = append(rulesList, rule)
 	}
