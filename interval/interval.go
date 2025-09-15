@@ -195,19 +195,17 @@ func (i *Intervaler) Iterate(direction Direction, maxAttempt *int32) (iter.Seq[t
 	}
 
 	maxAttemptCounter := defaultMaxAttempts(maxAttempt)
-	currentAttemptCounter := maxAttemptCounter
 	currentValue := i.opt.AnchorDate
 	var nextValue time.Time
 
 	return func(yield func(time.Time) bool) {
-		if currentValue.Equal(*i.opt.StartDate) {
-			ok := yield(i.opt.AnchorDate)
-			if !ok {
-				return
-			}
-		}
+		yield(currentValue)
 
 		for {
+			if maxAttemptCounter <= 0 {
+				return
+			}
+			maxAttemptCounter--
 			nextValue = i.calculateNext(currentValue, direction)
 			if nextValue.IsZero() {
 				return
@@ -222,13 +220,11 @@ func (i *Intervaler) Iterate(direction Direction, maxAttempt *int32) (iter.Seq[t
 			}
 
 			if direction == DirectionForward && nextValue.Before(*i.opt.StartDate) {
-				currentAttemptCounter -= 1
 				currentValue = nextValue // trying next
 				continue
 			}
 
 			if direction == DirectionBackward && nextValue.After(*i.opt.StartDate) {
-				currentAttemptCounter -= 1
 				currentValue = nextValue // trying next
 				continue
 			}
@@ -239,7 +235,6 @@ func (i *Intervaler) Iterate(direction Direction, maxAttempt *int32) (iter.Seq[t
 			}
 
 			currentValue = nextValue
-			currentAttemptCounter = maxAttemptCounter
 		}
 	}, nil
 }

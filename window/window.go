@@ -114,16 +114,6 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 	includes := rules.FilterRules(w.opt.Rules, rules.RuleTypeInclusion)
 	excludes := rules.FilterRules(w.opt.Rules, rules.RuleTypeExclusion)
 
-	// Create a include window with the entire range if no inclusion rules are defined
-	if len(includes) == 0 {
-		completeInclusion := rules.CreateCompleteInclusionRule(*w.opt.StartDate, *w.opt.EndDate)
-		includes = append(includes, completeInclusion)
-	}
-
-	// Safe-guard: avoid infinite loop
-	calculatedMaxAttempts := defaultMaxAttempts(maxAttempt)
-	maxCounter := int32(0)
-
 	return func(yield func(common.WindowResult) bool) {
 		next, _ := iter.Pull(iterator)
 		// defer stop()
@@ -134,11 +124,6 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 		}
 
 		for {
-			// Stop if we reached the max attempts
-			if maxCounter >= calculatedMaxAttempts {
-				return // stop iteration
-			}
-
 			nextTime, ok := next()
 			if !ok {
 				return
@@ -153,7 +138,12 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 			var subWindows []common.SubWindowResult
 
 			// 1. Apply inclusion rules
-			additiveSubWindows := rules.GenerateSubWindowsForRuleType(direction, w.opt.FrequencyUnit, previousTime, nextTime, includes, tz)
+			var additiveSubWindows []common.SubWindowResult
+			if len(includes) == 0 {
+				additiveSubWindows = []common.SubWindowResult{{Start: previousTime, End: nextTime}}
+			} else {
+				additiveSubWindows = rules.GenerateSubWindowsForRuleType(direction, w.opt.FrequencyUnit, previousTime, nextTime, includes, tz)
+			}
 
 			// 2. Apply exclusion rules
 			subtractiveSubWindows := rules.GenerateSubWindowsForRuleType(direction, w.opt.FrequencyUnit, previousTime, nextTime, excludes, tz)
@@ -167,7 +157,6 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 
 				// Move to the next element
 				previousTime = nextTime
-				maxCounter += 1
 				continue // skip to the next iteration if no sub-windows are created
 			}
 
@@ -179,15 +168,34 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 				return
 			}
 
-			maxCounter = 0
 			previousTime = nextTime
 		}
 	}, nil
 }
 
 func (w *Windower) All(direction interval.Direction, maxAttempt *int32) ([]common.WindowResult, error) {
-	// panic("unimplemented")
-	return nil, nil
+	var estimatePeriods int32
+	if w.opt.StartDate != nil && w.opt.EndDate != nil {
+		estimatePeriods = w.estimateIntervalSize(*w.opt.StartDate, *w.opt.EndDate, w.opt.FrequencyUnit, int32(w.opt.IntervalValue))
+	} else {
+		estimatePeriods = 1000
+	}
+
+	if estimatePeriods >= MAX_LIST_SIZE {
+		return []common.WindowResult{}, fmt.Errorf("maximum size is %v - please select a smaller range", MAX_LIST_SIZE)
+	}
+
+	list := make([]common.WindowResult, 0, estimatePeriods)
+	iterator, err := w.Iterate(direction, maxAttempt)
+	if err != nil {
+		return []common.WindowResult{}, err
+	}
+
+	for value := range iterator {
+		list = append(list, value)
+	}
+
+	return list, nil
 }
 
 func (w *Windower) isWindowBetweenTimes(window common.WindowResult, startTime time.Time, endTime time.Time) bool {
