@@ -62,16 +62,66 @@ func convertRRULEtoWindowOption(ruleString string) (*WindowOption, error) {
 	}
 
 	// Rules specific logic
+	rule := rules.Rule{IntervalType: rules.RuleTypeInclusion}
+	hasRule := false
+
 	if len(rr.OrigOptions.Byweekday) != 0 {
 		var wkDays []time.Weekday
 		for _, wk := range rr.OrigOptions.Byweekday {
 			wkDays = append(wkDays, MapRRuleWeekToWeekday(wk))
 		}
+		rule.DayOfWeeks = wkDays
+		hasRule = true
+	}
 
-		rulesList = append(rulesList, rules.Rule{
-			IntervalType: rules.RuleTypeInclusion,
-			DayOfWeeks:   wkDays,
-		})
+	if len(rr.OrigOptions.Bymonth) != 0 {
+		var months []time.Month
+		for _, m := range rr.OrigOptions.Bymonth {
+			months = append(months, (time.Month)(m))
+		}
+		rule.Months = months
+		hasRule = true
+	}
+
+	if len(rr.OrigOptions.Bymonthday) != 0 {
+		var monthDays []uint32
+		for _, day := range rr.OrigOptions.Bymonthday {
+			monthDays = append(monthDays, (uint32)(day))
+		}
+		rule.MonthDays = monthDays
+		hasRule = true
+	}
+
+	// For time, we can only represent a single time or a single range.
+	// RRULE can have multiple values, e.g., BYHOUR=8,18.
+	// The current TimeRange struct does not support this.
+	// For now, we will only take the first value for each.
+	timeRef := rules.TimeReference{}
+	hasTimeRef := false
+	if len(rr.OrigOptions.Byhour) > 0 {
+		timeRef.Hour = rr.OrigOptions.Byhour[0]
+		hasTimeRef = true
+	}
+	if len(rr.OrigOptions.Byminute) > 0 {
+		timeRef.Minute = rr.OrigOptions.Byminute[0]
+		hasTimeRef = true
+	}
+	if len(rr.OrigOptions.Bysecond) > 0 {
+		timeRef.Second = rr.OrigOptions.Bysecond[0]
+		hasTimeRef = true
+	}
+
+	if hasTimeRef {
+		rule.TimeRange = &rules.TimeRange{
+			StartTimeReference: timeRef,
+			// For now, we assume a single point in time, so start and end are the same.
+			EndTimeReference: timeRef,
+		}
+		hasRule = true
+	}
+
+	if hasRule {
+		rulesList = append(rulesList, rule)
 	}
 
 	return &WindowOption{
