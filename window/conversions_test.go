@@ -299,6 +299,94 @@ func TestRRULEConversion(t *testing.T) {
 			},
 			expectedError: false,
 		},
+		{
+			name:        "Monthly by month",
+			rruleString: "FREQ=MONTHLY;BYMONTH=1",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMonth,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{
+					{
+						IntervalType: rules.RuleTypeInclusion,
+						Months:       []time.Month{time.January},
+					},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Yearly by month day",
+			rruleString: "FREQ=YEARLY;BYMONTHDAY=15",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyYear,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{
+					{
+						IntervalType: rules.RuleTypeInclusion,
+						MonthDays:    []uint32{15},
+					},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Daily by hour, minute, second",
+			rruleString: "FREQ=DAILY;BYHOUR=10;BYMINUTE=30;BYSECOND=5",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyDay,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{
+					{
+						IntervalType: rules.RuleTypeInclusion,
+						TimeRange: &rules.TimeRange{
+							StartTimeReference: rules.TimeReference{Hour: 10, Minute: 30, Second: 5},
+							EndTimeReference:   rules.TimeReference{Hour: 10, Minute: 30, Second: 5},
+						},
+					},
+				},
+			},
+			expectedError: false,
+		},
+		{
+			name:        "Weekly on Monday in June",
+			rruleString: "FREQ=WEEKLY;BYDAY=MO;BYMONTH=6",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    now,
+					StartDate:     helper.ToPointer(now),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyWeek,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{
+					{
+						IntervalType: rules.RuleTypeInclusion,
+						DayOfWeeks:   []time.Weekday{time.Monday},
+						Months:       []time.Month{time.June},
+					},
+				},
+			},
+			expectedError: false,
+		},
 		// {
 		// 	name:        "Simple Daily Interval (1) With DTstart (20250101000000)",
 		// 	rruleString: "DTSTART=20240101T090000Z;FREQ=DAILY;INTERVAL=1",
