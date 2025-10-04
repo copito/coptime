@@ -137,50 +137,101 @@ func adjustFrequencyUnitForRuleEvaluation(unit interval.Frequency) interval.Freq
 }
 
 func GenerateSubWindowsForRuleType(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rules []Rule, loc *time.Location) []common.SubWindowResult {
+	subWindows := make([]common.SubWindowResult, 0, len(rules))
+	for _, r := range rules {
+		subWindows = append(subWindows, generateSubWindowsForRule(direction, unit, start, end, r, loc)...)
+	}
+
+	subWindows = MergeSubWindows(subWindows)
+
+	return subWindows
+}
+
+func GenerateSubWindowsForRule(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rule Rule, loc *time.Location) []common.SubWindowResult {
+	return generateSubWindowsForRule(direction, unit, start, end, rule, loc)
+}
+
+func generateSubWindowsForRule(direction interval.Direction, unit interval.Frequency, start time.Time, end time.Time, rule Rule, loc *time.Location) []common.SubWindowResult {
 	evaluatedFrequencyUnit := adjustFrequencyUnitForRuleEvaluation(unit)
 
-	// Generate a day window for each subwindow
+	rangeStart := start
+	rangeEnd := end
+	if end.Before(start) {
+		rangeStart = end
+		rangeEnd = start
+	}
+
+	evaluationEnd := nextTimeForFrequency(rangeEnd, evaluatedFrequencyUnit)
+
 	iv := interval.New(interval.IntervalOption{
-		AnchorDate:    start,
-		StartDate:     &start,
-		EndDate:       &end,
+		AnchorDate:    rangeStart,
+		StartDate:     &rangeStart,
+		EndDate:       &evaluationEnd,
 		FrequencyUnit: evaluatedFrequencyUnit,
 		IntervalValue: 1,
 	})
 
-	times, err := iv.Between(direction, start, end, nil)
+	times, err := iv.Between(interval.DirectionForward, rangeStart, evaluationEnd, nil)
 	if err != nil {
 		return []common.SubWindowResult{}
 	}
 
 	evaluationWindow := timesToWindows(times)
 
-	subWindows := make([]common.SubWindowResult, 0, len(evaluationWindow)*len(rules))
+	subWindows := make([]common.SubWindowResult, 0, len(evaluationWindow))
 	for _, w := range evaluationWindow {
-		for _, r := range rules {
-			subWindowFilter := matchesRuleToWindow(r, w.Start, w.End)
+		subWindowFilter := matchesRuleToWindow(rule, w.Start, w.End)
 
-			if subWindowFilter == nil {
-				continue // skip rule if the rule does not match
-			}
-
-			if subWindowFilter.Start.IsZero() || subWindowFilter.End.IsZero() {
-				continue // skip rule if the rule does not match
-			}
-
-			if subWindowFilter.Start.Equal(subWindowFilter.End) || subWindowFilter.Start.After(subWindowFilter.End) {
-				continue // skip invalid windows
-			}
-
-			subWindows = append(subWindows, *subWindowFilter)
+		if subWindowFilter == nil {
+			continue // skip rule if the rule does not match
 		}
+
+		if subWindowFilter.Start.IsZero() || subWindowFilter.End.IsZero() {
+			continue // skip rule if the rule does not match
+		}
+
+		if subWindowFilter.Start.Equal(subWindowFilter.End) || subWindowFilter.Start.After(subWindowFilter.End) {
+			continue // skip invalid windows
+		}
+
+		subWindows = append(subWindows, *subWindowFilter)
 	}
 
-	subWindows = mergeSubWindows(subWindows)
+	if rule.Filter != nil {
+		subWindows = rule.Filter(subWindows)
+	}
+
 	return subWindows
 }
 
-func mergeSubWindows(subWindows []common.SubWindowResult) []common.SubWindowResult {
+func nextTimeForFrequency(t time.Time, freq interval.Frequency) time.Time {
+	switch freq {
+	case interval.FrequencyNanoSecond:
+		return t.Add(time.Nanosecond)
+	case interval.FrequencyMilliSecond:
+		return t.Add(time.Millisecond)
+	case interval.FrequencySecond:
+		return t.Add(time.Second)
+	case interval.FrequencyMinute:
+		return t.Add(time.Minute)
+	case interval.FrequencyHour:
+		return t.Add(time.Hour)
+	case interval.FrequencyDay:
+		return t.AddDate(0, 0, 1)
+	case interval.FrequencyWeek:
+		return t.AddDate(0, 0, 7)
+	case interval.FrequencyMonth:
+		return t.AddDate(0, 1, 0)
+	case interval.FrequencyQuarter:
+		return t.AddDate(0, 3, 0)
+	case interval.FrequencyYear:
+		return t.AddDate(1, 0, 0)
+	default:
+		return t
+	}
+}
+
+func MergeSubWindows(subWindows []common.SubWindowResult) []common.SubWindowResult {
 	if len(subWindows) == 0 {
 		return subWindows
 	}

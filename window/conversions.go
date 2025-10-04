@@ -92,6 +92,12 @@ func convertRRULEtoWindowOption(ruleString string) (*WindowOption, error) {
 		hasRule = true
 	}
 
+	var occurrenceIndexes []int
+	if len(rr.OrigOptions.Bysetpos) != 0 {
+		occurrenceIndexes = append(occurrenceIndexes, rr.OrigOptions.Bysetpos...)
+		hasRule = true
+	}
+
 	// For time, we can only represent a single time or a single range.
 	// RRULE can have multiple values, e.g., BYHOUR=8,18.
 	// The current TimeRange struct does not support this.
@@ -121,6 +127,9 @@ func convertRRULEtoWindowOption(ruleString string) (*WindowOption, error) {
 	}
 
 	if hasRule {
+		if len(occurrenceIndexes) > 0 {
+			rule.Filter = rules.NewOccurrenceFilter(occurrenceIndexes)
+		}
 		rulesList = append(rulesList, rule)
 	}
 
