@@ -111,13 +111,13 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 	}
 
 	// Handle rules
-	includes := rules.FilterRules(w.opt.Rules, rules.RuleTypeInclusion)
-	excludes := rules.FilterRules(w.opt.Rules, rules.RuleTypeExclusion)
+	includeBindings := buildRuleBindings(w.opt, rules.RuleTypeInclusion)
+	excludeBindings := buildRuleBindings(w.opt, rules.RuleTypeExclusion)
 
 	// Create a include window with the entire range if no inclusion rules are defined
-	if len(includes) == 0 {
+	if len(includeBindings) == 0 {
 		completeInclusion := rules.CreateCompleteInclusionRule(*w.opt.StartDate, *w.opt.EndDate)
-		includes = append(includes, completeInclusion)
+		includeBindings = append(includeBindings, ruleBinding{rule: completeInclusion})
 	}
 
 	// Safe-guard: avoid infinite loop
@@ -153,10 +153,10 @@ func (w *Windower) Iterate(direction interval.Direction, maxAttempt *int32) (ite
 			var subWindows []common.SubWindowResult
 
 			// 1. Apply inclusion rules
-			additiveSubWindows := rules.GenerateSubWindowsForRuleType(direction, w.opt.FrequencyUnit, previousTime, nextTime, includes, tz)
+			additiveSubWindows := generateSubWindowsForBindings(direction, w.opt.FrequencyUnit, previousTime, nextTime, includeBindings, tz)
 
 			// 2. Apply exclusion rules
-			subtractiveSubWindows := rules.GenerateSubWindowsForRuleType(direction, w.opt.FrequencyUnit, previousTime, nextTime, excludes, tz)
+			subtractiveSubWindows := generateSubWindowsForBindings(direction, w.opt.FrequencyUnit, previousTime, nextTime, excludeBindings, tz)
 
 			// 3. Combine additive and subtractive sub-windows
 			subWindows = rules.SubtractSubwindowsFromAdditives(additiveSubWindows, subtractiveSubWindows)

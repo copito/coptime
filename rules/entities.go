@@ -1,6 +1,12 @@
 package rules
 
-import "time"
+import (
+	"time"
+
+	"github.com/copito/coptime/common"
+)
+
+type SubWindowFilter func([]common.SubWindowResult) []common.SubWindowResult
 
 type RuleType int32
 
@@ -42,4 +48,5 @@ type Rule struct {
 	MonthDays    []uint32
 	Months       []time.Month
 	Years        []uint32
+	Filter       SubWindowFilter
 }

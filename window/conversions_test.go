@@ -5,10 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/copito/coptime/common"
 	"github.com/copito/coptime/helper"
 	"github.com/copito/coptime/interval"
 	rules "github.com/copito/coptime/rules"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/teambition/rrule-go"
 )
 
@@ -26,6 +28,7 @@ func TestRRULEConversion(t *testing.T) {
 		rruleString          string
 		expectedWindowOption WindowOption
 		expectedError        bool
+		validate             func(t *testing.T, opt *WindowOption)
 	}{
 		{
 			name:        "Invalid RRULE",
@@ -387,6 +390,48 @@ func TestRRULEConversion(t *testing.T) {
 			},
 			expectedError: false,
 		},
+		{
+			name:        "Monthly last day with occurrence filter",
+			rruleString: "DTSTART:20240131T000000Z\nRRULE:FREQ=MONTHLY;BYSETPOS=-1;BYMONTHDAY=28,29,30,31",
+			expectedWindowOption: WindowOption{
+				IntervalOption: interval.IntervalOption{
+					AnchorDate:    time.Date(2024, time.January, 31, 0, 0, 0, 0, time.UTC),
+					StartDate:     helper.ToPointer(time.Date(2024, time.January, 31, 0, 0, 0, 0, time.UTC)),
+					EndDate:       nil,
+					Size:          &inf,
+					FrequencyUnit: interval.FrequencyMonth,
+					IntervalValue: uint32(1),
+				},
+				Rules: []rules.Rule{
+					{
+						IntervalType: rules.RuleTypeInclusion,
+						MonthDays:    []uint32{28, 29, 30, 31},
+					},
+				},
+			},
+			expectedError: false,
+			validate: func(t *testing.T, opt *WindowOption) {
+				require.NotEmpty(t, opt.Rules, "expected rules for validation")
+				if opt.Rules[0].Filter == nil {
+					t.Fatalf("expected filter to be configured")
+				}
+
+				windows := []common.SubWindowResult{
+					{Start: time.Date(2024, time.January, 28, 0, 0, 0, 0, time.UTC), End: time.Date(2024, time.January, 29, 0, 0, 0, 0, time.UTC)},
+					{Start: time.Date(2024, time.January, 29, 0, 0, 0, 0, time.UTC), End: time.Date(2024, time.January, 30, 0, 0, 0, 0, time.UTC)},
+					{Start: time.Date(2024, time.January, 30, 0, 0, 0, 0, time.UTC), End: time.Date(2024, time.January, 31, 0, 0, 0, 0, time.UTC)},
+					{Start: time.Date(2024, time.January, 31, 0, 0, 0, 0, time.UTC), End: time.Date(2024, time.February, 1, 0, 0, 0, 0, time.UTC)},
+				}
+
+				filtered := opt.Rules[0].Filter(windows)
+				require.Len(t, filtered, 1, "filter should reduce to a single window")
+
+				expected := time.Date(2024, time.January, 31, 0, 0, 0, 0, time.UTC)
+				if !filtered[0].Start.Equal(expected) {
+					t.Fatalf("expected filtered start %s, got %s", expected, filtered[0].Start)
+				}
+			},
+		},
 		// {
 		// 	name:        "Simple Daily Interval (1) With DTstart (20250101000000)",
 		// 	rruleString: "DTSTART=20240101T090000Z;FREQ=DAILY;INTERVAL=1",
@@ -516,6 +561,65 @@ func TestRRULEConversion(t *testing.T) {
 					assert.Nil(t, rule.TimeRange, "time range is nil")
 				}
 
+			}
+
+			if tt.validate != nil {
+				tt.validate(t, calculatedActual)
+			}
+		})
+	}
+}
+
+func TestWindowerFromRRULEBackwardGeneration(t *testing.T) {
+	type expectedOccurrence struct {
+		name     string
+		rrule    string
+		expected []time.Time
+	}
+
+	testCases := []expectedOccurrence{
+		{
+			name:  "last day of month backwards",
+			rrule: "DTSTART:20240131T000000Z\nRRULE:FREQ=MONTHLY;INTERVAL=1;BYSETPOS=-1;BYMONTHDAY=28,29,30,31",
+			expected: []time.Time{
+				time.Date(2024, time.January, 31, 0, 0, 0, 0, time.UTC),
+				time.Date(2023, time.December, 31, 0, 0, 0, 0, time.UTC),
+				time.Date(2023, time.November, 30, 0, 0, 0, 0, time.UTC),
+				time.Date(2023, time.October, 31, 0, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			w, err := FromRRULE(tt.rrule)
+			require.NoError(t, err)
+
+			maxAttempts := helper.ToPointer(int32(20))
+			iterator, err := w.Iterate(interval.DirectionBackward, maxAttempts)
+			require.NoError(t, err)
+
+			collected := make([]time.Time, 0, len(tt.expected))
+			for window := range iterator {
+				if len(collected) >= len(tt.expected) {
+					break
+				}
+
+				if len(window.SubWindow) == 0 {
+					continue
+				}
+
+				collected = append(collected, window.SubWindow[0].Start)
+			}
+
+			if len(collected) != len(tt.expected) {
+				t.Fatalf("expected %d occurrences, got %d", len(tt.expected), len(collected))
+			}
+
+			for i, want := range tt.expected {
+				if !collected[i].Equal(want) {
+					t.Fatalf("expected occurrence %d to be %s, got %s", i, want, collected[i])
+				}
 			}
 		})
 	}
